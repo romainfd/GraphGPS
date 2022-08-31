@@ -2,9 +2,9 @@ out_dir: results
 metric_best: accuracy
 wandb:
   use: True
-  project: malnet
+  project: qgnn
 dataset:
-  format: PyG-MalNetTiny
+  format: PyG-GraphCovers
   name: LocalDegreeProfile
   task: graph
   task_type: classification
