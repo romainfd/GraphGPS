@@ -89,7 +89,7 @@ class GraphCovers(InMemoryDataset):
             raw_path = osp.join(raw_path, os.listdir(raw_path)[0])
             filenames = glob.glob(osp.join(raw_path, '*.edgelist'))
 
-            for filename in filenames:
+            for filename in filenames[:2]:  # to at least have a validation graph and avoid division by zero
                 with open(filename, 'r') as f:
                     edges = f.read().split('\n')[5:-1]
                 edge_index = [[int(s) for s in edge.split()] for edge in edges]
@@ -110,6 +110,11 @@ class GraphCovers(InMemoryDataset):
                     split_dict['test'].append(ind)
                 else:
                     raise ValueError(f'No split assignment for "{graph_id}".')
+
+        # Overriding splits | Not needed as names are converted to ID for used graphs above
+        split_dict['train'] = [0, 1, 2, 3, 4]
+        split_dict['valid'] = [5, 6, 7]
+        split_dict['test'] = [8, 9]
 
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
