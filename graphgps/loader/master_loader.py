@@ -304,8 +304,8 @@ def preformat_GraphCovers(dataset_dir, feature_set):
         raise ValueError(f"Unexpected transform function: {feature_set}")
 
     dataset = GraphCovers(dataset_dir)
-    dataset.name = 'MalNetTiny'
-    logging.info(f'Computing "{feature_set}" node features for MalNetTiny.')
+    dataset.name = 'GraphCovers'
+    logging.info(f'Computing "{feature_set}" node features for GraphCovers.')
     pre_transform_in_memory(dataset, tf)
 
     split_dict = dataset.get_idx_split()
