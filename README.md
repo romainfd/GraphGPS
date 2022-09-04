@@ -18,8 +18,8 @@ Specifically *PyG v2.0.4* is required.
 ### Python environment setup with Conda
 
 ```bash
-conda create -n graphgps python=3.9
-conda activate graphgps
+conda create -n graphgps_cover python=3.9
+conda activate graphgps_cover
 
 conda install pytorch=1.10 torchvision torchaudio -c pytorch -c nvidia
 conda install pyg=2.0.4 -c pyg -c conda-forge
@@ -32,6 +32,9 @@ pip install performer-pytorch
 pip install ogb
 pip install tensorboardX
 pip install wandb
+
+# For GraphCovers setup
+pip install plotly
 
 conda clean --all
 ```
