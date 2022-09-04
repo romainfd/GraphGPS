@@ -5,7 +5,7 @@ wandb:
   project: qgnn
 dataset:
   format: PyG-GraphCovers
-  name: LocalDegreeProfile
+  name: Constant  # within [Constant, OneHotDegree, LocalDegreeProfile]
   task: graph
   task_type: classification
   transductive: False
