@@ -14,7 +14,6 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loader import load_pyg, load_ogb, set_dataset_attr
 from torch_geometric.graphgym.register import register_loader
 
-from graphgps.loader.dataset.graph_covers import GraphCovers
 from graphgps.loader.dataset.malnet_tiny import MalNetTiny
 from graphgps.loader.split_generator import (prepare_splits,
                                              set_dataset_splits)
@@ -103,9 +102,6 @@ def load_dataset_master(format, name, dataset_dir):
 
         elif pyg_dataset_id == 'MalNetTiny':
             dataset = preformat_MalNetTiny(dataset_dir, feature_set=name)
-
-        elif pyg_dataset_id == 'GraphCovers':
-            dataset = preformat_GraphCovers(dataset_dir, feature_set=name)
 
         elif pyg_dataset_id == 'Planetoid':
             dataset = Planetoid(dataset_dir, name)
@@ -271,39 +267,6 @@ def preformat_MalNetTiny(dataset_dir, feature_set):
         raise ValueError(f"Unexpected transform function: {feature_set}")
 
     dataset = MalNetTiny(dataset_dir)
-    dataset.name = 'MalNetTiny'
-    logging.info(f'Computing "{feature_set}" node features for MalNetTiny.')
-    pre_transform_in_memory(dataset, tf)
-
-    split_dict = dataset.get_idx_split()
-    dataset.split_idxs = [split_dict['train'],
-                          split_dict['valid'],
-                          split_dict['test']]
-
-    return dataset
-
-
-def preformat_GraphCovers(dataset_dir, feature_set):
-    """Load and preformat Graph Covers
-
-    Args:
-        dataset_dir: path where to store the cached dataset
-        feature_set: select what node features to precompute as GraphCovers
-            originally doesn't have any node nor edge features
-
-    Returns:
-        PyG dataset object
-    """
-    if feature_set in ['none', 'Constant']:
-        tf = T.Constant()
-    elif feature_set == 'OneHotDegree':
-        tf = T.OneHotDegree()
-    elif feature_set == 'LocalDegreeProfile':
-        tf = T.LocalDegreeProfile()
-    else:
-        raise ValueError(f"Unexpected transform function: {feature_set}")
-
-    dataset = GraphCovers(dataset_dir)
     dataset.name = 'MalNetTiny'
     logging.info(f'Computing "{feature_set}" node features for MalNetTiny.')
     pre_transform_in_memory(dataset, tf)
