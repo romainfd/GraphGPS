@@ -35,6 +35,8 @@ pip install wandb
 
 # For GraphCovers setup
 pip install plotly
+pip install dgl
+pip install tqdm
 
 conda clean --all
 ```

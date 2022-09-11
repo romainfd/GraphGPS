@@ -1,14 +1,18 @@
 from typing import Optional, Callable, List
+from scipy import io
+from tqdm.auto import tqdm
 
 import os
 import glob
 import os.path as osp
 
+import numpy as np
 import torch
 from torch_geometric.data import (InMemoryDataset, Data, download_url,
                                   extract_tar, extract_zip)
 from torch_geometric.utils import remove_isolated_nodes, from_networkx
 from .GraphCoversRepo.covers import gen_graphCovers
+import dgl
 
 """
 Implementing custom dataset into GraphGPS 
@@ -46,6 +50,15 @@ class QM7(InMemoryDataset):
             value, indicating whether the data object should be included in the
             final dataset. (default: :obj:`None`)
     """
+    # --------- TO UPDATE BASED ON NEED
+    min_node, max_node = 4, 25
+    embed_z = True
+    use_positions = True
+    splits = (.8, .1, .1)
+    permutation_seed = 21
+
+    url = 'http://deepchem.io.s3-website-us-west-1.amazonaws.com/datasets/qm7.mat'
+
     def __init__(self, root: str, transform: Optional[Callable] = None,
                  pre_transform: Optional[Callable] = None,
                  pre_filter: Optional[Callable] = None):
@@ -56,7 +69,7 @@ class QM7(InMemoryDataset):
     @property
     def raw_file_names(self) -> List[str]:
         """A list of files in the `raw_dir` which needs to be found in order to skip the download."""
-        return []
+        return ['qm7.mat']
 
     @property
     def processed_file_names(self) -> List[str]:
@@ -65,47 +78,63 @@ class QM7(InMemoryDataset):
 
     def download(self):
         """Downloads raw data into `raw_dir`."""
-        pass
+        download_url(self.url, self.raw_dir)
 
     def process(self):
         """Processes raw data and saves it into the `processed_dir`."""
-        edge_index = [
-            [1, 2], [2, 1],
-            [2, 3], [3, 2],
-            [2, 4], [4, 2],
-            [3, 4], [4, 3],
-            [4, 5], [5, 4],
-            [5, 6], [6, 5],
-            [5, 7], [7, 5],
-            [6, 7], [7, 6]
-        ]
-        edge_index = list(map(lambda l: [i - 1 for i in l], edge_index))
-        cycle_edge = [[1, 3], [4, 5]]
+        data = io.loadmat(osp.join(self.raw_dir, self.raw_file_names[0]))
 
-        graph_covers = gen_graphCovers(edge_index, degree=3, cycle_edge=cycle_edge, nb_covers=6)
+        # ---------------- COPY PASTED FROM QGNN-FINAL
+        # keys 'X', 'R', 'Z', 'T', 'P'
+        labels = dgl.backend.tensor(data['T'], dtype=dgl.backend.data_type_dict['float32']).reshape(-1, 1)
+        feats = data['X']
+        num_graphs = labels.shape[0]
+        graphs = []
+        for i in range(num_graphs):
+            edge_list = feats[i].nonzero()
+            g = dgl.convert.graph(edge_list)
+            g.edata['h'] = dgl.backend.tensor(feats[i][edge_list[0], edge_list[1]].reshape(-1, 1),
+                                    dtype=dgl.backend.data_type_dict['float32'])
+            nb_nodes = g.num_nodes()
+            g.ndata['R'] = dgl.backend.tensor(data['R'][i][:nb_nodes])
+            g.ndata['Z'] = dgl.backend.tensor(data['Z'][i][:nb_nodes])
+            graphs.append(g)
+        # ------------------------------------------
 
-        # make three classes:
-        n = len(graph_covers)
-        targets = torch.zeros(n, dtype=torch.long)
-        targets[n // 3:] = 1
-        targets[n // 3 * 2:] = 2
+        # ---------------- NODE NUMBER FILTERING
+        # ADDING CUSTOM METHODS TO FILTER AND COMPUTE ATTRIBUTES
+        # Filter on number of nodes (wrapped around zip / unzip of graphs with labels)
+        graphs, labels = filter_nb_nodes(graphs, self.min_node, self.max_node, list(labels))
+        # ------------------------------------------
 
-        # make 2 classes:
-        # targets = torch.zeros(len(dgl_graphs), dtype=torch.long)
-        # targets[len(dgl_graphs) // 2:] = 1
+        # ---------------- COPY PASTED FROM QGNN-FINAL
+        # For QM7, atomic number and coordinates are usable | Ref.: https://stackoverflow.com/a/66301026/10115198
+        self.different_z = list(np.unique(data['Z']))
+        for g in graphs:
+            g.ndata['Z_one_hot'] = torch.stack(list(map(self.one_hot, g.ndata['Z'].numpy())))
+            z = g.ndata['Z_one_hot'] if self.embed_z else g.ndata['Z'].unsqueeze(1)
+            if self.use_positions:
+                g.ndata['attr'] = torch.hstack((z, g.ndata['R']))
+            else:
+                g.ndata['attr'] = z
+        # ------------------------------------------
+            g.ndata['x'] = g.ndata['attr']
+        targets = torch.tensor(labels).reshape((len(labels), 1))
 
-        # Simply duplicate train data for val and test
         data_list = []
-        for _ in range(3):
-            for i, cover in enumerate(graph_covers):
-                graph = from_networkx(cover.nxGraph)
-                graph.y = targets[i % n]
-                data_list.append(graph)
+        for i, g in tqdm(enumerate(graphs[:5])):
+            networkx_graph = g.to_networkx(node_attrs=['x'])
+            graph = from_networkx(networkx_graph)
+            graph.y = targets[i]
+            data_list.append(graph)
 
+        train_indices, val_indices, test_indices = dgl.data.utils.split_dataset(
+            range(len(data_list)), frac_list=self.splits, shuffle=True, random_state=self.permutation_seed
+        )
         split_dict = {
-            'train': list(range(n)),
-            'valid': list(range(n, 2*n)),
-            'test': list(range(2*n, 3*n))
+            'train': list(train_indices.indices),
+            'valid': list(val_indices.indices),
+            'test': list(test_indices.indices)
         }
 
         if self.pre_filter is not None:
@@ -114,8 +143,28 @@ class QM7(InMemoryDataset):
         if self.pre_transform is not None:
             data_list = [self.pre_transform(data) for data in data_list]
 
+        # torch.save(self.collate(data_list), self.processed_paths[0])
         torch.save(self.collate(data_list), self.processed_paths[0])
         torch.save(split_dict, self.processed_paths[1])
 
     def get_idx_split(self):
         return torch.load(self.processed_paths[1])
+
+    # ---------------- COPY PASTED FROM QGNN-FINAL
+    def one_hot(self, val):
+        i = self.different_z.index(val)
+        n = len(self.different_z)
+        return torch.zeros(n).scatter_(0, torch.tensor([i]), 1)
+
+
+# ---------------- COPY PASTED FROM QGNN-FINAL
+def filter_nb_nodes(graphs, min_node, max_node, *linked_lists):
+    return list(map(
+        # Converting all elements from tuples to lists
+        list,
+        # Filtering graph & linked_data based on graph's number of nodes
+        zip(*filter(
+            lambda p: (min_node <= p[0].number_of_nodes()) and (p[0].number_of_nodes() <= max_node),
+            zip(graphs, *linked_lists)
+        ))
+    ))
