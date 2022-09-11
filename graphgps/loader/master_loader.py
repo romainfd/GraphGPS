@@ -15,6 +15,7 @@ from torch_geometric.graphgym.loader import load_pyg, load_ogb, set_dataset_attr
 from torch_geometric.graphgym.register import register_loader
 
 from graphgps.loader.dataset.graph_covers import GraphCovers
+from graphgps.loader.dataset.qm7 import QM7
 from graphgps.loader.dataset.malnet_tiny import MalNetTiny
 from graphgps.loader.split_generator import (prepare_splits,
                                              set_dataset_splits)
@@ -105,7 +106,10 @@ def load_dataset_master(format, name, dataset_dir):
             dataset = preformat_MalNetTiny(dataset_dir, feature_set=name)
 
         elif pyg_dataset_id == 'GraphCovers':
-            dataset = preformat_GraphCovers(dataset_dir, feature_set=name)
+            dataset = preformat_custom('GraphCovers', dataset_dir, feature_set=name)
+
+        elif pyg_dataset_id == 'QM7':
+            dataset = preformat_custom('QM7', dataset_dir, feature_set=name)
 
         elif pyg_dataset_id == 'Planetoid':
             dataset = Planetoid(dataset_dir, name)
@@ -283,8 +287,8 @@ def preformat_MalNetTiny(dataset_dir, feature_set):
     return dataset
 
 
-def preformat_GraphCovers(dataset_dir, feature_set):
-    """Load and preformat Graph Covers
+def preformat_custom(dataset_name, dataset_dir, feature_set):
+    """Load and preformat dataset
 
     Args:
         dataset_dir: path where to store the cached dataset
@@ -303,9 +307,13 @@ def preformat_GraphCovers(dataset_dir, feature_set):
     else:
         raise ValueError(f"Unexpected transform function: {feature_set}")
 
-    dataset = GraphCovers(dataset_dir)
-    dataset.name = 'GraphCovers'
-    logging.info(f'Computing "{feature_set}" node features for GraphCovers.')
+    dataset = None
+    if dataset_name == 'GraphCovers':
+        dataset = GraphCovers(dataset_dir)
+    elif dataset_name == 'QM7':
+        dataset = QM7(dataset_dir)
+    dataset.name = dataset_name
+    logging.info(f'Computing "{feature_set}" node features for {dataset_name}.')
     pre_transform_in_memory(dataset, tf)
 
     split_dict = dataset.get_idx_split()
