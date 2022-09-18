@@ -56,6 +56,11 @@ python main.py --cfg configs/SAN/zinc-SAN.yaml  wandb.use False
 python main.py --cfg tests/configs/graph/zinc.yaml  wandb.use False
 ```
 
+### Running GraphGPS on our datasets
+```bash
+python main.py --cfg configs/GPS/graphcovers-GPS+RWSE.yaml wandb.use False
+python main.py --cfg configs/GPS/qm7-GPS+RWSE.yaml wandb.use False
+```
 
 ### Benchmarking GPS on 11 datasets
 See `run/run_experiments.sh` script to run multiple random seeds per each of the 11 datasets. We rely on Slurm job scheduling system.

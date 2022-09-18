@@ -8,7 +8,7 @@ import os.path as osp
 
 import numpy as np
 import torch
-from torch_geometric.data import (InMemoryDataset, Data, download_url,
+from torch_geometric.data import (Dataset, InMemoryDataset, Data, download_url,
                                   extract_tar, extract_zip)
 from torch_geometric.utils import remove_isolated_nodes, from_networkx
 from .GraphCoversRepo.covers import gen_graphCovers
@@ -119,12 +119,13 @@ class QM7(InMemoryDataset):
                 g.ndata['attr'] = z
         # ------------------------------------------
             g.ndata['x'] = g.ndata['attr']
-        targets = torch.tensor(labels).reshape((len(labels), 1))
+        targets = torch.tensor(labels).reshape((len(labels), ))
 
         data_list = []
-        for i, g in tqdm(enumerate(graphs[:5])):
+        for i, g in tqdm(enumerate(graphs)):
             networkx_graph = g.to_networkx(node_attrs=['x'])
             graph = from_networkx(networkx_graph)
+            graph.x = torch.stack(graph.x)  # From list of tensors to tensor of tensors
             graph.y = targets[i]
             data_list.append(graph)
 
@@ -143,7 +144,6 @@ class QM7(InMemoryDataset):
         if self.pre_transform is not None:
             data_list = [self.pre_transform(data) for data in data_list]
 
-        # torch.save(self.collate(data_list), self.processed_paths[0])
         torch.save(self.collate(data_list), self.processed_paths[0])
         torch.save(split_dict, self.processed_paths[1])
 
