@@ -4,7 +4,7 @@ wandb:
   use: True
   project: qgnn
 dataset:
-  format: PyG-GraphCovers
+  format: PyG-GraphCovers-3-6
   name: Constant  # within [Constant, OneHotDegree, LocalDegreeProfile]
   task: graph
   task_type: classification

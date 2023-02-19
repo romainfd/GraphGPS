@@ -105,8 +105,8 @@ def load_dataset_master(format, name, dataset_dir):
         elif pyg_dataset_id == 'MalNetTiny':
             dataset = preformat_MalNetTiny(dataset_dir, feature_set=name)
 
-        elif pyg_dataset_id == 'GraphCovers':
-            dataset = preformat_custom('GraphCovers', dataset_dir, feature_set=name)
+        elif pyg_dataset_id.startswith('GraphCovers'):
+            dataset = preformat_custom(pyg_dataset_id, dataset_dir, feature_set=name)
 
         elif pyg_dataset_id == 'QM7':
             dataset = preformat_custom('QM7', dataset_dir, feature_set=name)
@@ -308,8 +308,13 @@ def preformat_custom(dataset_name, dataset_dir, feature_set):
         raise ValueError(f"Unexpected transform function: {feature_set}")
 
     dataset = None
-    if dataset_name == 'GraphCovers':
-        dataset = GraphCovers(dataset_dir)
+    if dataset_name.startswith('GraphCovers'):
+        if dataset_name == 'GraphCovers':
+            # Default param values
+            dataset_name = 'GraphCovers-3-6'
+        # Extract params from name GraphCovers-degree-nb_covers
+        _, degree, nb_covers = dataset_name.split('-')
+        dataset = GraphCovers(dataset_dir, int(degree), int(nb_covers))
     elif dataset_name == 'QM7':
         dataset = QM7(dataset_dir)
     dataset.name = dataset_name

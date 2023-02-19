@@ -50,9 +50,12 @@ class GraphCovers(InMemoryDataset):
             value, indicating whether the data object should be included in the
             final dataset. (default: :obj:`None`)
     """
-    def __init__(self, root: str, transform: Optional[Callable] = None,
+    def __init__(self, root: str, degree: int, nb_covers: int,
+                 transform: Optional[Callable] = None,
                  pre_transform: Optional[Callable] = None,
                  pre_filter: Optional[Callable] = None):
+        self.degree = degree
+        self.nb_covers = nb_covers
         super().__init__(root, transform, pre_transform, pre_filter)
         self.process()  # Forcing call as it was skipped when `processed_paths` files already existed
         self.data, self.slices = torch.load(self.processed_paths[0])
@@ -86,7 +89,7 @@ class GraphCovers(InMemoryDataset):
         edge_index = list(map(lambda l: [i - 1 for i in l], edge_index))
         cycle_edge = [[1, 3], [4, 5]]
 
-        graph_covers = gen_graphCovers(edge_index, degree=3, cycle_edge=cycle_edge, nb_covers=6)
+        graph_covers = gen_graphCovers(edge_index, degree=self.degree, cycle_edge=cycle_edge, nb_covers=self.nb_covers)
 
         # make three classes:
         n = len(graph_covers)
