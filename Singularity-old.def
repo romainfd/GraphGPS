@@ -1,0 +1,68 @@
+Bootstrap: docker
+From: python:3.9-slim
+Stage: customise
+
+%post
+#############################
+# Pytorch geometric install #
+#    > different tries <    #
+#############################
+# 1. Installing Pytorch Geometric requisites and then itself | Ref.: https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html#quick-start
+# 1.A/ With latest cuda 116 support
+# torch 1.13 cuda 11.6 -> pyg:2.2.0
+# pip install torch==1.13.0+cu116  --extra-index-url https://download.pytorch.org/whl/cu116
+# pip install pyg-lib torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric==2.2.0 -f https://data.pyg.org/whl/torch-1.13.0+cu116.html
+
+# 1.B/ With earlier version
+# torch 1.11 cuda 11.5 -> pyg:2.0.4 | Ref.: https://pytorch-geometric.readthedocs.io/en/2.0.4/notes/installation.html
+# pip install torch==1.11.0+cu115  --extra-index-url https://download.pytorch.org/whl/cu115
+# pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric==2.0.4 -f https://data.pyg.org/whl/torch-1.11.0+cu115.html
+# pip install torch_geometric=2.0.4
+
+# 1.C/ Matching local Romain config
+# torch 1.10 cuda 11.3 -> pyg:2.0.4 | Ref.: https://pytorch-geometric.readthedocs.io/en/2.0.4/notes/installation.html
+# pip install torch==1.10.0+cu113  --extra-index-url https://download.pytorch.org/whl/cu113
+# pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric==2.0.4 -f https://data.pyg.org/whl/torch-1.10.0+cu113.html
+
+# 2. Simpler Slimane install
+# pip install torch==1.10.0+cu113  --extra-index-url https://download.pytorch.org/whl/cu113
+# pip install torch_geometric==2.0.4
+# ^ Was missing torch packages... (like torch-scatter)
+# pip install torch-scatter torch-sparse torch-cluster torch-spline-conv --no-index -f https://data.pyg.org/whl/torch-1.10.0+cu113.html
+# ^ --no-index to avoid being looking for latest version but only for the latest version available on the -f site
+# Builds well but -> OSError: libcusparse.so.11: cannot open shared object file: No such file or directory
+
+# 3. Trying with more recent versions | Ref.: https://pytorch-geometric.readthedocs.io/en/2.3.0/install/installation.html
+# pip install torch==1.13.0+cu116  --extra-index-url https://download.pytorch.org/whl/cu116
+# pip install torch_geometric==2.3.0
+# pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv --no-index -f https://data.pyg.org/whl/torch-1.13.0+cu116.html
+# Build well but -> requires `pip install yacs pytorch_lightning` and then fails with incorrect use of torch_geometrics/graphgym and yacs (same version as locally though)...
+
+# 4. Trying with same version as locally torch_geometric==2.0.4 but latest CUDA possible (11.5)
+# pip install torch==1.11.0+cu115  --extra-index-url https://download.pytorch.org/whl/cu115
+# pip install torch_geometric==2.0.4
+# pip install torch-scatter torch-sparse torch-cluster torch-spline-conv --no-index -f https://data.pyg.org/whl/torch-1.11.0+cu115.html
+# Builds well but -> OSError: libcusparse.so.11: cannot open shared object file: No such file or directory
+
+##################
+# Other installs #
+##################
+pip install performer-pytorch
+pip install rdkit
+pip install torchmetrics
+pip install ogb
+pip install tensorboardX
+pip install wandb
+pip install networkx==2.6.3
+pip install openfermion
+pip install numpy
+
+# For GraphCovers setup
+pip install plotly
+pip install dgl
+pip install tqdm
+
+%runscript
+exec /bin/bash "$@"
+%startscript
+exec /bin/bash "$@"

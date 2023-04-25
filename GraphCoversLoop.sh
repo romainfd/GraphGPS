@@ -1,9 +1,9 @@
-#!/usr/local/bin/bash
+#!/bin/bash
 echo $BASH_VERSION
 
-for DEGREE in {3..10}
+for DEGREE in `seq 3 10`
 do
-  for NB_COVERS in {3..30..3}
+  for NB_COVERS in `seq 3 30 3`
   do
     echo "Running for degree=$DEGREE and nb_covers=$NB_COVERS"
     sed -i '' "7s/.*/  format: PyG-GraphCovers-$DEGREE-$NB_COVERS/" configs/GPS/graphcovers-GPS+RWSE.yaml
